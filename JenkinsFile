@@ -1,47 +1,43 @@
-pipeline {  
-agent any  
+pipeline {
+    agent any
 
-environment {  
-    DOCKER_CREDENTIAL_ID = 'dockerhub-credentials' // Jenkins credentials id  
-    DOCKER_IMAGE = 'khushveersinghgurjar/flask-app-docker:latest'  
-    GIT_REPO_URL = 'https://github.com/Khushveer01/JenkinsPipelineAssessment.git'  
-}  
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        IMAGE_NAME = 'khushveersinghgurjar/flask-app-docker'
+    }
 
-stages {  
-    stage('Checkout') {  
-        steps {  
-            // Clone the Git repository  
-            git branch: 'main', url: "${GIT_REPO_URL}"  
-        }  
-    }  
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Khushveer01/JenkinsPipelineAssessment.git'
+            }
+        }
 
-    stage('Build Docker Image') {  
-        steps {  
-            // Build the Docker image  
-            script {  
-                docker.build("${DOCKER_IMAGE}")  
-            }  
-        }  
-    }  
+        stage('Build Docker Image') {
+            steps {
+                bat "docker build -t %IMAGE_NAME% ."
+            }
+        }
 
-    stage('Push Docker Image') {  
-        steps {  
-            // Login to Docker Hub  
-            withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {  
-                bat "echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin"  
-            }  
-            // Push the Docker image to Docker Hub  
-            bat "docker push %DOCKER_IMAGE%"  
-        }  
-    }  
-}  
+        stage('Login to Docker Hub') {
+            steps {
+                bat "echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin"
+            }
+        }
 
-post {  
-    success {  
-        echo 'Pipeline completed successfully!'  
-    }  
-    failure {  
-        echo 'Pipeline failed!'  
-    }  
-}  
+        stage('Push Image to Docker Hub') {
+            steps {
+                bat "docker push %IMAGE_NAME%"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Docker image built and pushed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
 }
